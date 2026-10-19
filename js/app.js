@@ -13,6 +13,7 @@ import {settings,favorites} from './settings.js';
 import {schemas} from './schema.js';
 import {hydrateImages} from './uploads.js';
 import {PROFILE_IDS} from './roster.js';
+import './android.js';
 
 const nav=[['PRINCIPAL',[['dashboard','Visão da rede'],['chat','Canal da rede'],['search','Pesquisa']]],['BANCO DE DADOS',[['person','Pessoas'],['place','Locais'],['rumor','Rumores'],['investigation','Investigações'],['clue','Pistas'],['theory','Teorias'],['document','Documentos'],['connections','Conexões']]],['CRÔNICA',[['session','Sessões'],['event','Cronologia']]],['SEU TERMINAL',[['profile','Meu perfil'],['note','Anotações'],['favorites','Favoritos'],['settings','Configurações']]]];
 let globals=[],mounted=false;
