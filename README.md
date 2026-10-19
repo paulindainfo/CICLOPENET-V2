@@ -6,6 +6,10 @@
 
 Paulo (dono do site, convite de administrador), Flavia, Duda, Sofia e Felipe (mestre da mesa, convite próprio de administrador). Os IDs user1 a user4 foram preservados; Felipe usa user5. A permissão administrativa pertence ao dispositivo que usa o convite, independentemente do perfil selecionado. Os códigos ficam somente nos arquivos privados locais.
 
+## Aplicativo Android
+
+[Baixar e instalar o APK](https://paulindainfo.github.io/CICLOPENET-V2/apk/). Usa o mesmo ícone, site e banco; Android 8 ou superior. Cada instalação precisa de convite. Avisos gratuitos de mensagens e atualizações por verificação periódica de 15 minutos ou mais, conforme as restrições do Android; não são push instantâneo. O botão Avisos configura e testa as notificações. Código e instruções de compilação/assinatura em [docs/ANDROID.md](docs/ANDROID.md). Esta entrega foi compilada e teve sua assinatura verificada, mas ainda não foi testada em um celular Android físico.
+
 ## Situação da entrega
 
 Publicado em **https://paulindainfo.github.io/CICLOPENET-V2/**, com código completo em **https://github.com/paulindainfo/CICLOPENET-V2**. GitHub Pages ativo, regras e índices publicados, cinco perfis inicializados e projeto mantido no Spark sem faturamento. O repositório original CICLOPENET foi preservado.

@@ -13,7 +13,9 @@ await mkdir('artifacts/screenshots',{recursive:true});
 try{
   for(const width of [1440,390]){
     const context=await browser.newContext({viewport:{width,height:1000}}),page=await context.newPage();
+    await context.addInitScript(()=>{globalThis.nativeSessions=[];globalThis.nativeDownloads=[];globalThis.CiclopeAndroid={syncSession:(token,uid)=>globalThis.nativeSessions.push({tokenLength:token.length,uid}),saveFile:(name,mime,data)=>globalThis.nativeDownloads.push({name,mime,data})};});
     page.on('pageerror',e=>errors.push(e.message));
+    page.on('dialog',async d=>{errors.push(d.message());await d.accept();});
     await page.goto('http://127.0.0.1:5175/?emulator=1');
     await page.locator('#invite-code').fill(invites[4].code);
     await page.getByRole('button',{name:'Autorizar este terminal'}).click();
@@ -29,9 +31,13 @@ try{
     await page.evaluate(()=>location.hash='#/settings');
     await page.locator('#campaign-form').waitFor();
     assert.equal(await page.getByRole('button',{name:'Salvar crônica'}).isEnabled(),true);
+    await page.waitForFunction(()=>globalThis.nativeSessions.some(s=>s.tokenLength>20&&s.uid),{timeout:15000});
+    await page.locator('#export-backup').click();await page.waitForFunction(()=>globalThis.nativeDownloads.length>0);
+    const exported=await page.evaluate(()=>{const file=globalThis.nativeDownloads[0],value=JSON.parse(atob(file.data));return {name:file.name,mime:file.mime,profiles:value.profiles.length};});
+    assert.match(exported.name,/\.json$/);assert.equal(exported.mime,'application/json');assert.equal(exported.profiles,5);
     await context.close();
   }
-  assert.deepEqual(errors,[]);console.log(JSON.stringify({passed:true,checks:['Cinco nomes no seletor desktop e mobile','Identificação de dono e mestre','Felipe entra com administração','Contagem de cinco participantes','Sem overflow horizontal']}));
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({passed:true,checks:['Cinco nomes no seletor desktop e mobile','Identificação de dono e mestre','Felipe entra com administração','Contagem de cinco participantes','Sem overflow horizontal','Sessão autorizada transmitida à ponte Android simulada','Backup entregue ao seletor Android simulado']}));
 }finally{
   await browser.close();server.kill();
   const require=createRequire(import.meta.url);await require('firebase-admin/firestore').getFirestore().terminate();for(const app of require('firebase-admin/app').getApps())await require('firebase-admin/app').deleteApp(app);

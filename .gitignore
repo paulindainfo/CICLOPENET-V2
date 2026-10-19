@@ -11,3 +11,8 @@ reference/
 *.tar.gz
 test-results/
 playwright-report/
+*.apk
+*.jks
+*.keystore
+android/build/
+*.apk.idsig
