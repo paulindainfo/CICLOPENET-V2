@@ -1,0 +1,12 @@
+Snapshot das regras publicadas, consultado com autorização do proprietário em 19/10/2026, antes da V2:
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
+
+Estas regras não são adequadas à V2: qualquer conta autenticada tinha acesso a todos os documentos. A versão nova preserva o acesso autenticado tradicional fora de networks/ e exige associação à rede dentro de networks/. Usuários anônimos da V2 não recebem acesso aos dados antigos.

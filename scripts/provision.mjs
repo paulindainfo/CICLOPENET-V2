@@ -1,0 +1,6 @@
+import {cliCredential} from './admin-auth.mjs';
+const project='schrecknet-e40df',token=await cliCredential().getAccessToken();
+async function call(url,method='GET',body){const response=await fetch(url,{method,headers:{Authorization:`Bearer ${token.access_token}`,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});const data=await response.json();if(!response.ok)throw new Error(`${response.status}: ${data.error?.message||response.statusText}`);return data;}
+const billing=await call(`https://cloudbilling.googleapis.com/v1/projects/${project}/billingInfo`),config=await call(`https://identitytoolkit.googleapis.com/admin/v2/projects/${project}/config`);
+console.log(JSON.stringify({project,billingEnabled:billing.billingEnabled===true,anonymousAuthEnabled:config.signIn?.anonymous?.enabled===true}));
+if(process.argv.includes('--free')||process.argv.includes('--disable-anonymous')){const enabled=process.argv.includes('--free');await call(`https://identitytoolkit.googleapis.com/admin/v2/projects/${project}/config?updateMask=signIn.anonymous.enabled`,'PATCH',{signIn:{anonymous:{enabled}}});console.log(enabled?'Acesso técnico anônimo habilitado. Faturamento não foi alterado.':'Configuração de acesso anônimo restaurada para desabilitada. Faturamento não foi alterado.');}

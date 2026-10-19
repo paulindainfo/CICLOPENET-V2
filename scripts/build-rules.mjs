@@ -1,0 +1,122 @@
+import {writeFile} from 'node:fs/promises';
+import {TEXT_FIELDS} from '../public/js/domain.js';
+const optional=(name,i,expr)=>`(${name}.size() <= ${i} || (${expr}))`;
+const assets=Array.from({length:4},(_,i)=>optional('r.attachments',i,`asset(r.attachments[${i}])`)).join(' &&\n        ');
+const rules=`rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function network() { return /databases/$(database)/documents/networks/principal; }
+    function memberPath() { return /databases/$(database)/documents/networks/principal/members/$(request.auth.uid); }
+    function member() { return request.auth != null && exists(memberPath()) && get(memberPath()).data.active == true; }
+    function admin() { return member() && get(memberPath()).data.role == 'admin'; }
+    function bounded() { return request.query.limit != null && request.query.limit <= 200; }
+    function profile(p) { return p in ['user1','user2','user3','user4']; }
+    function author(a) { return a is map && a.keys().hasOnly(['uid','profile']) && a.uid == request.auth.uid && profile(a.profile); }
+    function optionalText(m,k) { return !(k in m) || (m[k] is string && m[k].size() <= 12000); }
+    function asset(a) { return a is map && a.keys().hasOnly(['path','name','type','size']) && a.path is string && a.path.matches('^networks/principal/files/[A-Za-z0-9_-]+$') && a.name is string && a.name.size() <= 180 && a.type in ['image/jpeg','image/png','image/webp','image/gif','application/pdf','text/plain'] && a.size is int && a.size > 0 && a.size <= 921600; }
+    function validFields(r) { return r.fields is map && r.fields.keys().hasOnly(${JSON.stringify(TEXT_FIELDS)}) && optionalText(r.fields,'clan') && optionalText(r.fields,'sect') && optionalText(r.fields,'entityType') && optionalText(r.fields,'status') && optionalText(r.fields,'category') && optionalText(r.fields,'sortDate'); }
+    function validTags(r) { return r.tags is list && r.tags.size() <= 12; }
+    function validLinks(r) { return r.links is list && r.links.size() <= 24; }
+    function validAssets(r) { return r.attachments is list && r.attachments.size() <= 4 && ${assets}; }
+    function record(r) {
+      return r.keys().hasOnly(['type','title','summary','content','fields','tags','links','attachments','ownerProfile','sourceMessage','deleted','revision','createdAt','updatedAt','createdBy','updatedBy','searchTokens'])
+        && r.type in ['person','place','rumor','investigation','clue','theory','document','session','event','note']
+        && r.title is string && r.title.size() > 0 && r.title.size() <= 160 && r.summary is string && r.summary.size() <= 600 && r.content is string && r.content.size() <= 40000
+        && r.deleted is bool && r.revision is int && r.revision > 0 && r.updatedAt == request.time && author(r.updatedBy)
+        && r.createdAt is timestamp && r.createdBy is map && r.createdBy.keys().hasOnly(['uid','profile']) && r.createdBy.uid is string && profile(r.createdBy.profile)
+        && r.ownerProfile is string && (r.type != 'note' || profile(r.ownerProfile)) && r.sourceMessage is string && r.sourceMessage.size() <= 80
+        && validFields(r)
+        && (r.type != 'investigation' || r.fields.status in ['open','progress','closed','archived'])
+        && validTags(r) && validLinks(r) && validAssets(r)
+        && r.searchTokens is list && r.searchTokens.size() <= 2400;
+    }
+    match /networks/principal {
+      allow get: if member();
+      allow update: if (admin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','city','description','edition','revision'])
+        && request.resource.data.revision == resource.data.revision + 1 && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 100
+        && request.resource.data.city is string && request.resource.data.city.size() <= 100 && request.resource.data.description is string && request.resource.data.description.size() <= 8000 && request.resource.data.edition is string && request.resource.data.edition.size() <= 100)
+        || validCounts();
+      function validCounts() {
+        let r = getAfter(/databases/$(database)/documents/networks/principal/records/$(request.resource.data.lastRecordId)).data;
+        let p = /databases/$(database)/documents/networks/principal/records/$(request.resource.data.lastRecordId);
+        let prior = exists(p) && get(p).data.deleted == false ? 1 : 0;
+        return member() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['counts','lastRecordId','updatedAt']) && request.resource.data.updatedAt == request.time && r.updatedAt == request.time && r.updatedBy.uid == request.auth.uid
+          && request.resource.data.counts.diff(resource.data.counts).affectedKeys().hasOnly([r.type])
+          && request.resource.data.counts[r.type] == resource.data.counts.get(r.type,0) + (r.deleted ? 0 : 1) - prior;
+      }
+      match /members/{uid} {
+        allow get: if request.auth != null && request.auth.uid == uid;
+        allow create: if request.auth != null && request.auth.uid == uid && validJoin();
+        function validJoin() {
+          let r = request.resource.data;
+          let path = /databases/$(database)/documents/networks/principal/invites/$(r.inviteHash);
+          let invite = get(path).data;
+          return r.keys().hasOnly(['active','role','inviteHash','createdAt']) && r.active == true && r.role == invite.role && r.createdAt == request.time
+            && invite.expiresAt > request.time.toMillis() && invite.uses < invite.maxUses && getAfter(path).data.uses == invite.uses + 1;
+        }
+        allow update: if admin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['active']) && request.resource.data.active is bool;
+      }
+      match /invites/{hash} {
+        allow get: if request.auth != null;
+        allow update: if request.auth != null && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uses'])
+          && resource.data.expiresAt > request.time.toMillis() && resource.data.uses < resource.data.maxUses && request.resource.data.uses == resource.data.uses + 1
+          && !exists(memberPath()) && getAfter(memberPath()).data.inviteHash == hash;
+      }
+      match /records/{rid} {
+        allow get: if member(); allow list: if member() && bounded();
+        function paired(r) { return getAfter(/databases/$(database)/documents/networks/principal/records/$(rid)/versions/$(string(r.revision))).data == r
+          && getAfter(network()).data.lastRecordId == rid && getAfter(network()).data.updatedAt == request.time
+          && getAfter(/databases/$(database)/documents/networks/principal/activity/$(rid + '_' + string(r.revision))).data.recordId == rid; }
+        allow create: if member() && record(request.resource.data) && request.resource.data.revision == 1 && request.resource.data.createdAt == request.time && author(request.resource.data.createdBy) && paired(request.resource.data);
+        allow update: if member() && request.resource.data.revision == resource.data.revision + 1 && request.resource.data.createdAt == resource.data.createdAt && request.resource.data.createdBy == resource.data.createdBy && request.resource.data.type == resource.data.type && record(request.resource.data) && paired(request.resource.data);
+        match /versions/{version} {
+          allow get: if member(); allow list: if member() && bounded();
+          allow create: if member() && request.resource.data == getAfter(/databases/$(database)/documents/networks/principal/records/$(rid)).data && request.resource.data.updatedAt == request.time && version == string(request.resource.data.revision);
+        }
+      }
+      match /profiles/{pid} {
+        allow get, list: if member();
+        allow update: if member() && profile(pid) && request.resource.data.keys().hasOnly(['name','player','clan','sect','generation','concept','biography','description','nature','demeanor','notes','signature','color','edition','bloodPotency','avatar','revision','updatedAt','updatedBy'])
+          && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 80 && request.resource.data.revision == resource.data.revision + 1 && request.resource.data.updatedAt == request.time && author(request.resource.data.updatedBy)
+          && (request.resource.data.avatar == null || (asset(request.resource.data.avatar) && request.resource.data.avatar.type.matches('image/.*')))
+          && getAfter(/databases/$(database)/documents/networks/principal/profiles/$(pid)/versions/$(string(request.resource.data.revision))).data == request.resource.data;
+        match /versions/{version} {
+          allow get: if member(); allow list: if member() && bounded();
+          allow create: if member() && request.resource.data == getAfter(/databases/$(database)/documents/networks/principal/profiles/$(pid)).data && request.resource.data.updatedAt == request.time && version == string(request.resource.data.revision);
+        }
+      }
+      match /messages/{mid} {
+        allow get: if member(); allow list: if member() && bounded();
+        allow create: if member() && request.resource.data.keys().hasOnly(['body','profile','uid','authorName','createdAt','shared']) && request.resource.data.uid == request.auth.uid && profile(request.resource.data.profile) && request.resource.data.createdAt == request.time
+          && request.resource.data.body is string && request.resource.data.body.size() <= 6000 && (request.resource.data.body.size() > 0 || request.resource.data.shared != null)
+          && request.resource.data.authorName == get(/databases/$(database)/documents/networks/principal/profiles/$(request.resource.data.profile)).data.name && validShare();
+        function validShare() { let r = request.resource.data.shared; return r == null || (r is map && r.keys().hasOnly(['id','title','type','summary']) && r.title == get(/databases/$(database)/documents/networks/principal/records/$(r.id)).data.title && r.type == get(/databases/$(database)/documents/networks/principal/records/$(r.id)).data.type && r.summary == get(/databases/$(database)/documents/networks/principal/records/$(r.id)).data.summary); }
+      }
+      match /activity/{aid} {
+        allow get: if member(); allow list: if member() && bounded();
+        allow create: if member() && request.resource.data.keys().hasOnly(['profile','uid','action','recordId','title','type','revision','createdAt']) && request.resource.data.uid == request.auth.uid && profile(request.resource.data.profile) && request.resource.data.createdAt == request.time
+          && request.resource.data.action in ['removeu','atualizou','restaurou','registrou'] && request.resource.data.title == getAfter(/databases/$(database)/documents/networks/principal/records/$(request.resource.data.recordId)).data.title
+          && request.resource.data.type == getAfter(/databases/$(database)/documents/networks/principal/records/$(request.resource.data.recordId)).data.type && request.resource.data.profile == getAfter(/databases/$(database)/documents/networks/principal/records/$(request.resource.data.recordId)).data.updatedBy.profile
+          && request.resource.data.revision == getAfter(/databases/$(database)/documents/networks/principal/records/$(request.resource.data.recordId)).data.revision && getAfter(/databases/$(database)/documents/networks/principal/records/$(request.resource.data.recordId)).data.updatedAt == request.time;
+      }
+      match /contributions/{cid} {
+        allow get: if member(); allow list: if member() && bounded();
+        allow create: if member() && request.resource.data.keys().hasOnly(['recordId','body','profile','uid','createdAt']) && request.resource.data.uid == request.auth.uid && profile(request.resource.data.profile) && request.resource.data.createdAt == request.time && request.resource.data.body is string && request.resource.data.body.size() > 0 && request.resource.data.body.size() <= 12000 && get(/databases/$(database)/documents/networks/principal/records/$(request.resource.data.recordId)).data.deleted == false;
+      }
+      match /favorites/{fid} {
+        allow get: if member(); allow list: if member() && bounded();
+        allow create, update: if member() && request.resource.data.keys().hasOnly(['profile','recordId']) && profile(request.resource.data.profile) && fid == request.resource.data.profile + '_' + request.resource.data.recordId;
+        allow delete: if member();
+      }
+      match /files/{fid} {
+        allow get: if member(); allow list: if member() && bounded();
+        allow create: if member() && request.resource.data.keys().hasOnly(['path','name','type','size','data','uploadedBy','createdAt']) && request.resource.data.uploadedBy == request.auth.uid && request.resource.data.createdAt == request.time && request.resource.data.path == 'networks/principal/files/' + fid
+          && request.resource.data.name is string && request.resource.data.name.size() <= 180 && request.resource.data.type in ['image/jpeg','image/png','image/webp','image/gif','application/pdf','text/plain'] && request.resource.data.data is bytes && request.resource.data.data.size() == request.resource.data.size && request.resource.data.size > 0 && request.resource.data.size <= 921600;
+      }
+    }
+    // Compatibility with the original site, excluding anonymous V2 identities and the protected namespace.
+    match /{top}/{document=**} { allow read, write: if top != 'networks' && request.auth != null && request.auth.token.firebase.sign_in_provider != 'anonymous'; }
+  }
+}
+`;
+await writeFile(new URL('../firestore.rules',import.meta.url),rules);

@@ -1,0 +1,12 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {validRecord,validProfile,validAsset,searchTokens,validBackup} from '../public/js/domain.js';
+const record={type:'person',title:'Víctor do Elísio',summary:'Observado no hospital',content:'Ligado aos desaparecimentos',fields:{clan:'Ventrue'},links:[],tags:['São Paulo'],attachments:[]};
+test('cadastro rápido preserva texto e não exige detalhes',()=>{const r=validRecord({type:'person',title:'Victor'});assert.equal(r.title,'Victor');assert.deepEqual(r.fields,{});assert.deepEqual(r.links,[]);});
+test('índice normaliza acentos e encontra prefixos do título e palavras do conteúdo',()=>{const tokens=searchTokens(record);for(const term of ['vic','victor','elisio','sao','desaparecimentos'])assert.ok(tokens.includes(term),term);});
+test('teorias e pistas são entidades distintas com vínculos deduplicados',()=>{const r=validRecord({...record,type:'theory',links:['npc-1','npc-1','invest-1']});assert.deepEqual(r.links,['npc-1','invest-1']);assert.equal(r.type,'theory');});
+test('validação rejeita campos/IDs perigosos, excesso e estado inválido',()=>{for(const patch of [{title:''},{type:'admin'},{links:['../users/root']},{fields:{admin:true}},{content:'a'.repeat(40001)},{type:'investigation',fields:{status:'qualquer'}}])assert.throws(()=>validRecord({...record,...patch}));});
+test('texto contendo HTML é tratado como texto e nunca removido silenciosamente',()=>{assert.equal(validRecord({...record,content:'<script>alert(1)</script>'}).content,'<script>alert(1)</script>');});
+test('anexos recusam SVG, HTML, caminho fora da rede e tamanho excessivo',()=>{const asset={path:'networks/principal/files/file',name:'foto.png',type:'image/png',size:100};assert.deepEqual(validAsset(asset),asset);for(const patch of [{type:'image/svg+xml'},{type:'text/html'},{size:921601},{path:'other/file'}])assert.throws(()=>validAsset({...asset,...patch}));});
+test('perfil não admite PDF no avatar nem cor injetada',()=>{assert.throws(()=>validProfile({name:'A',color:'red;display:none'}));assert.throws(()=>validProfile({name:'A',avatar:{path:'networks/principal/files/file',name:'x.pdf',type:'application/pdf',size:10}}));});
+test('backup rejeita versão desconhecida e IDs repetidos',()=>{const data={format:'ciclope-net',version:2,records:[{...record,id:'npc-1'}]};assert.equal(validBackup(data),data);assert.throws(()=>validBackup({...data,version:1}));assert.throws(()=>validBackup({...data,records:[...data.records,...data.records]}));});

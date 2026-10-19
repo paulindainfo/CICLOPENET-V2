@@ -1,0 +1,24 @@
+{
+  "name": "ciclope-net-v2",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "check": "node scripts/check.mjs",
+    "test": "node --test tests/domain.test.mjs",
+    "test:integration": "firebase emulators:exec --config firebase.test.json --project demo-ciclope --only auth,firestore \"node --test tests/free-integration.test.mjs\"",
+    "emulators": "firebase emulators:start --config firebase.test.json --project demo-ciclope",
+    "bootstrap": "node scripts/bootstrap.mjs",
+    "package": "node scripts/package.mjs"
+  },
+  "devDependencies": {
+    "archiver": "^7.0.0",
+    "@firebase/rules-unit-testing": "^5.0.0",
+    "esbuild": "^0.25.0",
+    "firebase": "^12.0.0",
+    "firebase-admin": "^13.0.0",
+    "firebase-tools": "^14.0.0",
+    "playwright": "^1.55.0"
+  }
+}
