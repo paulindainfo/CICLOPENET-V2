@@ -14,7 +14,7 @@ export async function operate(db,auth,profile,action,data={}){
   const membership=(await getDoc(member)).data();
   if(!membership?.active)error('permission-denied','Este dispositivo precisa de um convite válido.');
   if(action==='access')return {role:membership.role};
-  if(!PROFILE_IDS.includes(profile))error('invalid-argument','Selecione um dos quatro perfis.');
+  if(!PROFILE_IDS.includes(profile))error('invalid-argument','Selecione um dos perfis da mesa.');
   const actor={uid,profile};
   if(action==='saveRecord'){
     const clean=validRecord(data.record),ref=doc(col('records'),data.id);
