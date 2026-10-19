@@ -5,16 +5,17 @@ import {pathToFileURL} from 'node:url';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {adminRequest,getAdminDocument} from './admin-rest.mjs';
+import {ROSTER} from '../public/js/roster.js';
 const url='https://paulindainfo.github.io/CICLOPENET-V2/';
 let previous=-1;
 for(let i=0;i<30;i++){
   const result=await adminRequest('https://firestore.googleapis.com/v1/projects/schrecknet-e40df/databases/(default)/collectionGroups/-/indexes'),pending=(result.indexes||[]).filter(v=>v.state!=='READY');
   if(!pending.length)break;if(pending.length!==previous){console.log(`Aguardando ${pending.length} índices em construção.`);previous=pending.length;}if(i===29)throw new Error('Índices ainda não estão prontos.');await new Promise(resolve=>setTimeout(resolve,15000));
 }
-const profiles=await Promise.all([1,2,3,4].map(i=>getAdminDocument('networks/principal/profiles/user'+i)));if(profiles.some(p=>!p))throw new Error('Perfil inicial ausente.');
+const profiles=await Promise.all(ROSTER.map(p=>getAdminDocument('networks/principal/profiles/'+p.id)));if(profiles.some(p=>!p))throw new Error('Perfil inicial ausente.');
 const invitation=JSON.parse(await readFile('CONVITES.private.json','utf8'));
-for(const entry of invitation.convites){const hash=createHash('sha256').update(entry.codigo).digest('hex'),stored=await getAdminDocument('networks/principal/invites/'+hash);if(!stored||stored.uses!==0)throw new Error('Um convite está ausente ou já foi usado.');}
-await mkdir('artifacts/production',{recursive:true});const browser=await chromium.launch({channel:'chrome',headless:true}),checks=['Quatro perfis no banco real','Quatro convites privados válidos, sem usos','Índices de produção prontos'],errors=[];
+for(const entry of invitation.convites){const hash=createHash('sha256').update(entry.codigo).digest('hex'),stored=await getAdminDocument('networks/principal/invites/'+hash);if(!stored||stored.role!==entry.papel||stored.uses>stored.maxUses||stored.expiresAt<=Date.now())throw new Error('Um convite está ausente, expirado ou com dados inválidos.');}
+await mkdir('artifacts/production',{recursive:true});const browser=await chromium.launch({channel:'chrome',headless:true}),checks=[`${profiles.length} perfis no banco real`,`${invitation.convites.length} convites privados com permissões verificadas`,'Índices de produção prontos'],errors=[];
 try{
   for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){
     const context=await browser.newContext({viewport}),page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error'&&/CORS policy/.test(m.text()))errors.push(m.text());});

@@ -5,7 +5,7 @@ Autorização final recebida do proprietário em 19/10/2026. Publicação conclu
 1. Criar o repositório público `paulindainfo/CICLOPENET-V2`, enviar o código completo em main e o frontend em gh-pages.
 2. Ativar GitHub Pages gratuito com a raiz de gh-pages. URL esperada: https://paulindainfo.github.io/CICLOPENET-V2/.
 3. Publicar firestore.rules e firestore.indexes.json no projeto existente schrecknet-e40df, banco padrão, mantendo o Spark sem faturamento.
-4. Inicializar networks/principal e os quatro perfis se ainda não existirem. Gerar quatro convites privados, fora do código público.
+4. Inicializar networks/principal e os cinco perfis se ainda não existirem. Gerar cinco convites privados, fora do código público.
 5. Verificar a URL publicada e testar a integração em produção sem inserir dados fictícios da campanha.
 
 O repositório original paulindainfo/CICLOPENET e seus documentos de campanha não serão substituídos ou migrados automaticamente.
@@ -23,3 +23,7 @@ Em 19/10/2026, a revisão automática de aprovação recusou a primeira tentativ
 A verificação de produção foi feita por leitura: HTTP 200 por HTTPS, módulos sem CORS, índices prontos, quatro perfis e quatro convites sem usos, interface de acesso desktop/mobile e negação de acesso ao visitante sem convite. A revisão automática rejeitou o teste que criaria e apagaria dados temporários em produção; essa operação foi substituída por verificações sem gravação de documentos da campanha. Os testes completos de gravação, edição, chat e backup constam em TESTES.md e foram executados nos emuladores.
 
 Antes de qualquer atualização futura, exporte um backup JSON da V2 e registre a versão das regras. Em caso de problema de interface, publique a revisão anterior do frontend; o histórico dos registros permanece no Firestore. Para falha de autorização, corrija as regras do namespace afetado, mantendo networks/ fechado para visitantes sem associação. Repor a regra original ampla voltaria a expor a V2 a todas as contas autenticadas e não é uma recuperação segura.
+
+## Participantes atualizados
+
+A pedido do proprietário, user1 passa a Paulo, user2 a Flavia, user3 a Duda e user4 a Sofia. user5 é Felipe, mestre da mesa. Os convites originais são preservados e foi criado um convite adicional de administrador para Felipe. CONVITES.private.json contém a relação atual e CONVITE-FELIPE.private.json contém apenas o convite do mestre; ambos ficam fora do Git e do ZIP público. A permissão de administração é concedida ao dispositivo, pelo convite. Nenhum recurso pago foi adicionado.

@@ -6,8 +6,9 @@ import {getAuth,connectAuthEmulator,signInAnonymously} from 'firebase/auth';
 import {getFirestore,connectFirestoreEmulator,doc,getDoc,setDoc,collection,query,limit,getDocs,onSnapshot,terminate,Bytes,serverTimestamp,where,orderBy} from 'firebase/firestore';
 import {readFile,writeFile,mkdir} from 'node:fs/promises';
 import {bootstrap} from '../scripts/bootstrap.mjs';
+import {ROSTER,PROFILE_IDS} from '../public/js/roster.js';
 const invites=await bootstrap({local:true});
-const adminRequire=createRequire(import.meta.url),adminDb=adminRequire('firebase-admin/firestore').getFirestore();for(const name of ['records','activity','files','messages','contributions','favorites'])await adminDb.recursiveDelete(adminDb.collection('networks/principal/'+name));await adminDb.doc('networks/principal').update({counts:{},revision:1});for(let i=1;i<=4;i++)await adminDb.doc('networks/principal/profiles/user'+i).update({revision:1});await adminDb.recursiveDelete(adminDb.collection('networks/principal/profiles/user1/versions'));
+const adminRequire=createRequire(import.meta.url),adminDb=adminRequire('firebase-admin/firestore').getFirestore();for(const name of ['records','activity','files','messages','contributions','favorites'])await adminDb.recursiveDelete(adminDb.collection('networks/principal/'+name));await adminDb.doc('networks/principal').update({counts:{},revision:1});for(const id of PROFILE_IDS)await adminDb.doc('networks/principal/profiles/'+id).update({revision:1});await adminDb.recursiveDelete(adminDb.collection('networks/principal/profiles/user1/versions'));
 await mkdir(new URL('../artifacts',import.meta.url),{recursive:true});
 await writeFile(new URL('../artifacts/operations-node.mjs',import.meta.url),(await readFile(new URL('../public/js/operations.js',import.meta.url),'utf8')).replaceAll('../vendor/firebase.js','firebase/firestore').replaceAll('./domain.js','../public/js/domain.js'));
 const {operate}=await import('../artifacts/operations-node.mjs');
@@ -16,7 +17,7 @@ async function client(name){
   const db=getFirestore(app);connectFirestoreEmulator(db,'127.0.0.1',8180);
   return {app,auth,db,call:(action,data={})=>operate(db,auth,data.profile||'user1',action,data)};
 }
-const a=await client('terminal-a'),b=await client('terminal-b'),stranger=await client('outsider');
+const a=await client('terminal-a'),b=await client('terminal-b'),stranger=await client('outsider'),master=await client('master');
 const ref=(client,id)=>doc(client.db,'networks/principal/records',id);
 const base={type:'person',title:'Victor — teste de integração',summary:'Observação inicial',content:'<img src=x onerror=alert(1)>',fields:{clan:'Ventrue'},links:[],tags:['teste'],attachments:[]};
 test('arquitetura gratuita: regras, persistência e colaboração',async t=>{
@@ -26,9 +27,9 @@ test('arquitetura gratuita: regras, persistência e colaboração',async t=>{
     await assert.rejects(setDoc(doc(stranger.db,'networks/principal/members',stranger.auth.currentUser.uid),{active:true,role:'admin',createdAt:serverTimestamp(),inviteHash:'0'.repeat(64)}));
     await assert.rejects(stranger.call('redeemInvite',{code:'0'.repeat(64)}),/inválido/i);
   });
-  await t.test('dois dispositivos entram por convite e recuperam quatro perfis',async()=>{
+  await t.test('dois dispositivos entram por convite e recuperam os cinco perfis',async()=>{
     await a.call('redeemInvite',{code:invites[0].code});await b.call('redeemInvite',{code:invites[1].code});
-    assert.equal((await getDocs(query(collection(a.db,'networks/principal/profiles'),limit(4)))).size,4);
+    const profiles=await getDocs(query(collection(a.db,'networks/principal/profiles'),limit(20)));assert.equal(profiles.size,5);assert.deepEqual(profiles.docs.map(p=>p.data().name),ROSTER.map(p=>p.name));
     assert.equal((await a.call('access')).role,'admin');assert.equal((await b.call('access')).role,'member');
   });
   await t.test('NPC persiste e é recebido em outro terminal em tempo real',async()=>{
@@ -75,6 +76,15 @@ test('arquitetura gratuita: regras, persistência e colaboração',async t=>{
   await t.test('configuração administrativa depende do dispositivo, não do perfil',async()=>{
     await assert.rejects(b.call('saveCampaign',{expectedRevision:1,value:{name:'Não autorizado'}}),/administrador/i);await a.call('saveCampaign',{profile:'user4',expectedRevision:1,value:{name:'Crônica de teste',city:'São Paulo',description:'',edition:'Livre'}});assert.equal((await getDoc(doc(b.db,'networks/principal'))).data().name,'Crônica de teste');
   });
+  await t.test('convite do mestre dá administração e o quinto perfil pode colaborar',async()=>{
+    await master.call('redeemInvite',{code:invites[4].code});assert.equal((await master.call('access')).role,'admin');
+    await assert.rejects(b.call('saveCampaign',{profile:'user5',expectedRevision:2,value:{name:'Não autorizado'}}),/administrador/i);
+    await master.call('saveCampaign',{profile:'user5',expectedRevision:2,value:{name:'Mesa do Felipe',city:'São Paulo',description:'',edition:'Livre'}});
+    await master.call('sendMessage',{profile:'user5',id:'master-message',body:'A sessão vai começar.'});
+    assert.equal((await getDoc(doc(a.db,'networks/principal/messages/master-message'))).data().profile,'user5');
+    await master.call('saveProfile',{profile:'user5',expectedRevision:1,value:{name:'Felipe',clan:'Mestre',color:'#639b85'}});
+    assert.equal((await getDoc(doc(a.db,'networks/principal/profiles/user5'))).data().revision,2);
+  });
   await t.test('conta anônima da V2 não lê o banco legado',async()=>{await assert.rejects(getDoc(doc(a.db,'campaigns/principal/pessoas/test')));});
   await t.test('cronologia preserva data ficcional livre e inclui ordenação automática',async()=>{
     await a.call('saveRecord',{id:'event-1',expectedRevision:0,record:{...base,type:'event',title:'A terceira lua',fields:{fictionalDate:'Noite da terceira lua',eventType:'Histórico'}}});
@@ -91,6 +101,6 @@ test('arquitetura gratuita: regras, persistência e colaboração',async t=>{
   });
 });
 test.after(async()=>{
-  for(const c of [a,b,stranger]){await terminate(c.db);await deleteApp(c.app);}
+  for(const c of [a,b,stranger,master]){await terminate(c.db);await deleteApp(c.app);}
   const require=createRequire(import.meta.url);await require('firebase-admin/firestore').getFirestore().terminate();for(const app of require('firebase-admin/app').getApps())await require('firebase-admin/app').deleteApp(app);
 });

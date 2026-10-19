@@ -36,3 +36,7 @@ Após a autorização, foi verificado o site real https://paulindainfo.github.io
 14. Recarregue o navegador e confira a recuperação do perfil e dos registros.
 15. Teste um navegador sem convite: a seleção de perfil não deve liberar acesso aos registros.
 16. Desconecte a rede durante uma edição. A interface deve preservar o rascunho e informar que não conseguiu salvar. Reconecte e envie novamente.
+
+## Atualização dos participantes — 19/10/2026
+
+A suíte atual de integração inclui 16 cenários (17 resultados TAP) e verifica os cinco perfis, o convite administrativo do mestre, a autoria e a edição do perfil user5. Selecionar Felipe em um dispositivo de membro não concede administração. O teste tests/roster-browser.mjs valida os cinco nomes, os rótulos do dono e mestre, a contagem dinâmica e a administração de Felipe em desktop e mobile. A alteração real dos nomes preserva os IDs e os convites originais; somente o novo convite solicitado é criado.

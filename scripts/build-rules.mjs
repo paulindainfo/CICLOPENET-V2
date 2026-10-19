@@ -1,5 +1,5 @@
 import {writeFile} from 'node:fs/promises';
-import {TEXT_FIELDS} from '../public/js/domain.js';
+import {TEXT_FIELDS,PROFILE_IDS} from '../public/js/domain.js';
 const optional=(name,i,expr)=>`(${name}.size() <= ${i} || (${expr}))`;
 const assets=Array.from({length:4},(_,i)=>optional('r.attachments',i,`asset(r.attachments[${i}])`)).join(' &&\n        ');
 const rules=`rules_version = '2';
@@ -10,7 +10,7 @@ service cloud.firestore {
     function member() { return request.auth != null && exists(memberPath()) && get(memberPath()).data.active == true; }
     function admin() { return member() && get(memberPath()).data.role == 'admin'; }
     function bounded() { return request.query.limit != null && request.query.limit <= 200; }
-    function profile(p) { return p in ['user1','user2','user3','user4']; }
+    function profile(p) { return p in ${JSON.stringify(PROFILE_IDS)}; }
     function author(a) { return a is map && a.keys().hasOnly(['uid','profile']) && a.uid == request.auth.uid && profile(a.profile); }
     function optionalText(m,k) { return !(k in m) || (m[k] is string && m[k].size() <= 12000); }
     function asset(a) { return a is map && a.keys().hasOnly(['path','name','type','size']) && a.path is string && a.path.matches('^networks/principal/files/[A-Za-z0-9_-]+$') && a.name is string && a.name.size() <= 180 && a.type in ['image/jpeg','image/png','image/webp','image/gif','application/pdf','text/plain'] && a.size is int && a.size > 0 && a.size <= 921600; }

@@ -1,10 +1,14 @@
 # CICLOPE NET V2
 
-**Nosferatu Information Network.** Aplicação colaborativa para quatro jogadores de Vampiro: A Máscara, feita em HTML, CSS e módulos JavaScript. Sem framework de interface, sem cadastro por email/senha e sem banco fictício em localStorage.
+**Nosferatu Information Network.** Aplicação colaborativa para cinco participantes de Vampiro: A Máscara, feita em HTML, CSS e módulos JavaScript. Sem framework de interface, sem cadastro por email/senha e sem banco fictício em localStorage.
+
+## Participantes da mesa
+
+Paulo (dono do site, convite de administrador), Flavia, Duda, Sofia e Felipe (mestre da mesa, convite próprio de administrador). Os IDs user1 a user4 foram preservados; Felipe usa user5. A permissão administrativa pertence ao dispositivo que usa o convite, independentemente do perfil selecionado. Os códigos ficam somente nos arquivos privados locais.
 
 ## Situação da entrega
 
-Publicado em **https://paulindainfo.github.io/CICLOPENET-V2/**, com código completo em **https://github.com/paulindainfo/CICLOPENET-V2**. GitHub Pages ativo, regras e índices publicados, quatro perfis inicializados e projeto mantido no Spark sem faturamento. O repositório original CICLOPENET foi preservado.
+Publicado em **https://paulindainfo.github.io/CICLOPENET-V2/**, com código completo em **https://github.com/paulindainfo/CICLOPENET-V2**. GitHub Pages ativo, regras e índices publicados, cinco perfis inicializados e projeto mantido no Spark sem faturamento. O repositório original CICLOPENET foi preservado.
 
 Criação, edição, chat, colaboração e backups foram testados nos emuladores e em dois contextos de navegador. Na URL pública, foram verificados HTTPS, carregamento sem CORS, perfis e índices reais, layout desktop/mobile e bloqueio de visitantes sem convite. Não foram criados ou apagados registros temporários da campanha em produção.
 
@@ -83,7 +87,7 @@ node scripts/provision.mjs --free
 node scripts/bootstrap.mjs --out CONVITES.private.json
 ```
 
-`bootstrap` cria a crônica e os quatro perfis somente se não existirem; não apaga registros existentes. Cada execução gera quatro novos convites. O arquivo **CONVITES.private.json é privado**, ignorado pelo Git e excluído do ZIP público. Não coloque os códigos em README, URLs ou código. Os índices podem levar alguns minutos para terminar de construir. A configuração web pública já está em `public/js/config.js`.
+`bootstrap` cria a crônica e os cinco perfis somente se não existirem; não apaga registros existentes. Cada execução gera cinco novos convites. O arquivo **CONVITES.private.json é privado**, ignorado pelo Git e excluído do ZIP público. Não coloque os códigos em README, URLs ou código. Os índices podem levar alguns minutos para terminar de construir. A configuração web pública já está em `public/js/config.js`.
 
 As regras de produção anteriores liberavam todos os documentos para qualquer conta autenticada. A nova versão exige associação para `networks/` e mantém o acesso tradicional autenticado às demais coleções, bloqueando identidades anônimas da V2 fora de sua área. **Essa mudança afeta regras de produção e exige a autorização final descrita em docs/PUBLICACAO.md.**
 

@@ -24,7 +24,7 @@ Não há edição dos registros, busca global, sessões como entidades, chat, up
 
 O plano inicial considerou banco nomeado, funções callable e Storage. A consulta autorizada ao projeto confirmou Spark sem faturamento. Em 19/10/2026 o proprietário determinou que o sistema permaneça 100% gratuito; a arquitetura foi adaptada antes da publicação.
 
-A implementação final usa o Firestore padrão do projeto existente, com os dados em networks/principal; as coleções originais ficam fora desse namespace. Anonymous Auth identifica o dispositivo, e um convite aleatório de 256 bits com hash SHA-256, prazo e limite de usos autoriza a associação. Os quatro perfis são identidades declaradas, não autenticação individual. Nenhuma migração dos registros antigos é automática.
+A implementação final usa o Firestore padrão do projeto existente, com os dados em networks/principal; as coleções originais ficam fora desse namespace. Anonymous Auth identifica o dispositivo, e um convite aleatório de 256 bits com hash SHA-256, prazo e limite de usos autoriza a associação. Os cinco perfis são identidades declaradas, não autenticação individual. Nenhuma migração dos registros antigos é automática.
 
 As alterações usam transações reais, com revisão esperada, histórico imutável, atividade e contadores na mesma operação. Regras de segurança verificam associação, autoria técnica, estrutura principal, versões e operações vinculadas. Detalhes livres e indexação textual são validados no cliente. Exclusões são lógicas e as contribuições ficam separadas do texto principal. Listas e histórico do chat são paginados; listeners são encerrados ao navegar.
 

@@ -1,5 +1,6 @@
 export const TYPES = ['person','place','rumor','investigation','clue','theory','document','session','event','note'];
-export const PROFILE_IDS = ['user1','user2','user3','user4'];
+import {PROFILE_IDS} from './roster.js';
+export {PROFILE_IDS};
 export const TEXT_FIELDS = ['aliases','entityType','clan','sect','generation','status','location','occupation','appearance','personality','history','motivations','affiliations','relationship','threat','confirmed','suspicions','observations','source','reliability','hypothesis','questions','conclusions','address','owner','faction','risk','situation','fictionalDate','sortDate','eventType','sessionNumber','realDate','participants','happenings','discoveries','decisions','consequences','openMysteries','resolvedMysteries','category','objectives','contacts','edition','bloodPotency'];
 export const PROFILE_FIELDS = ['name','player','clan','sect','generation','concept','biography','description','nature','demeanor','notes','signature','color','edition','bloodPotency'];
 export function fail(message) { throw new Error(message); }

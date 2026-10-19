@@ -8,7 +8,7 @@ Projeto: schrecknet-e40df. Banco: `(default)`. Raiz: `networks/principal`. As co
 
 | Caminho relativo | Conteúdo |
 | --- | --- |
-| profiles/user1…user4 | Quatro identidades de personagem e revisão |
+| profiles/user1…user5 | Cinco identidades de personagem e revisão |
 | members/{uid} | Associação do dispositivo, papel, ativo, hash do convite |
 | invites/{sha256} | Papel, expiração, usos e limite; lista negada |
 | records/{uuid} | Entidade tipada, título, resumo, conteúdo, campos, tags, vínculos, anexos e autoria |
