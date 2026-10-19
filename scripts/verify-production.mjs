@@ -1,60 +1,30 @@
+// Read-only verification: never redeems invites or writes/deletes campaign documents.
 import {chromium} from 'playwright';
-import {readFile,mkdir,writeFile} from 'node:fs/promises';
+import {mkdir,writeFile,readFile} from 'node:fs/promises';
+import {pathToFileURL} from 'node:url';
+import path from 'node:path';
 import {createHash} from 'node:crypto';
-import {adminRequest,documents,getAdminDocument,decodeDocument,adminCommit,deleteWrite} from './admin-rest.mjs';
+import {adminRequest,getAdminDocument} from './admin-rest.mjs';
 const url='https://paulindainfo.github.io/CICLOPENET-V2/';
-const probe=JSON.parse(await readFile('artifacts/probe.private.json','utf8'));
-let remaining=-1;
+let previous=-1;
 for(let i=0;i<30;i++){
-  const result=await adminRequest('https://firestore.googleapis.com/v1/projects/schrecknet-e40df/databases/(default)/collectionGroups/-/indexes');
-  const pending=(result.indexes||[]).filter(index=>index.state!=='READY');
-  if(!pending.length)break;
-  if(pending.length!==remaining){console.log(`Aguardando a construção de ${pending.length} índices do Firestore.`);remaining=pending.length;}
-  if(i===29)throw new Error('Os índices ainda estão em construção. Retome a verificação quando estiverem prontos.');
-  await new Promise(resolve=>setTimeout(resolve,15000));
+  const result=await adminRequest('https://firestore.googleapis.com/v1/projects/schrecknet-e40df/databases/(default)/collectionGroups/-/indexes'),pending=(result.indexes||[]).filter(v=>v.state!=='READY');
+  if(!pending.length)break;if(pending.length!==previous){console.log(`Aguardando ${pending.length} índices em construção.`);previous=pending.length;}if(i===29)throw new Error('Índices ainda não estão prontos.');await new Promise(resolve=>setTimeout(resolve,15000));
 }
-await mkdir('artifacts/production',{recursive:true});
-const browser=await chromium.launch({channel:'chrome',headless:true}),desktop=await browser.newContext({viewport:{width:1440,height:1000}}),mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
-const a=await desktop.newPage(),b=await mobile.newPage(),uids=[],records=new Set(),errors=[],checks=[];
-const root='networks/principal';
-for(const p of [a,b]){p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error'&&/CORS policy/.test(m.text()))errors.push(m.text());});p.on('dialog',d=>d.accept());}
-async function enter(page,invite,profile){
-  const response=await page.goto(url,{waitUntil:'domcontentloaded'});if(response.status()!==200)throw new Error(`HTTPS ${response.status()}`);
-  await page.locator('#invite-code').waitFor({timeout:45000});
-  const uid=await page.evaluate(async()=>{const {state}=await import('./js/state.js');return state.uid;});if(uid)uids.push(uid);
-  await page.locator('#invite-code').fill(invite);await page.getByRole('button',{name:'Autorizar este terminal'}).click();await page.locator(`[data-profile="${profile}"]`).click({timeout:30000});await page.locator('#quick-new').waitFor();
-}
-async function list(path){const result=await adminRequest(`${documents}/${path}?pageSize=200`);return (result.documents||[]).map(decodeDocument);}
-let success=false;
+const profiles=await Promise.all([1,2,3,4].map(i=>getAdminDocument('networks/principal/profiles/user'+i)));if(profiles.some(p=>!p))throw new Error('Perfil inicial ausente.');
+const invitation=JSON.parse(await readFile('CONVITES.private.json','utf8'));
+for(const entry of invitation.convites){const hash=createHash('sha256').update(entry.codigo).digest('hex'),stored=await getAdminDocument('networks/principal/invites/'+hash);if(!stored||stored.uses!==0)throw new Error('Um convite está ausente ou já foi usado.');}
+await mkdir('artifacts/production',{recursive:true});const browser=await chromium.launch({channel:'chrome',headless:true}),checks=['Quatro perfis no banco real','Quatro convites privados válidos, sem usos','Índices de produção prontos'],errors=[];
 try{
-  await enter(a,probe.convites[0].codigo,'user1');await enter(b,probe.convites[1].codigo,'user2');checks.push('HTTPS e módulos sem erro de CORS','Convites, quatro perfis e dois dispositivos autorizados');
-  await a.screenshot({path:'artifacts/production/dashboard.png',fullPage:true});
-  await a.locator('[data-route=person]').click();await a.locator('#new-record').click();await a.locator('[name=title]').fill('TESTE AUTOMÁTICO TEMPORÁRIO — CICLOPE');await a.locator('[name=summary]').fill('Registro temporário para verificar a publicação. Será removido ao concluir.');await a.locator('#record-form [type=submit]').click();await a.locator('#share-record').waitFor({timeout:30000});
-  const id=await a.evaluate(()=>location.hash.split('/')[2]);records.add(id);
-  await b.locator('#mobile-menu').click();await b.locator('[data-route=person]').click();await b.getByRole('link',{name:'TESTE AUTOMÁTICO TEMPORÁRIO — CICLOPE',exact:true}).first().waitFor();checks.push('Criação persistente de NPC recebida no segundo dispositivo');
-  await a.locator('#share-record').click();await b.locator('#mobile-menu').click();await b.locator('[data-route=chat]').click();await b.getByText('TESTE AUTOMÁTICO TEMPORÁRIO — CICLOPE',{exact:true}).first().waitFor();
-  await b.locator('#message-body').fill('TESTE DE TRANSMISSÃO TEMPORÁRIO — remover após a verificação.');await b.locator('#chat-form [type=submit]').click();await a.locator('[data-route=chat]').click();await a.getByText('TESTE DE TRANSMISSÃO TEMPORÁRIO — remover após a verificação.',{exact:true}).waitFor();checks.push('Cartão compartilhado e mensagens em tempo real entre dois perfis');
-  await a.locator('[data-route=search]').click();await a.locator('#search-input').fill('automatico');await a.locator('#search-form [type=submit]').click();await a.locator('#search-results .record-card').first().waitFor();checks.push('Busca global com índice de produção');
-  await a.goto(`${url}#/record/${id}`);await a.locator('#edit-record').waitFor();await a.locator('#edit-record').click();await a.locator('[name=summary]').fill('TESTE DE EDIÇÃO TEMPORÁRIO — persistência confirmada.');await a.locator('#record-form [type=submit]').click();await a.getByText('TESTE DE EDIÇÃO TEMPORÁRIO — persistência confirmada.',{exact:true}).first().waitFor();await a.reload();await a.getByText('TESTE DE EDIÇÃO TEMPORÁRIO — persistência confirmada.',{exact:true}).first().waitFor();checks.push('Edição e persistência após recarregar');
-  await a.locator('[data-route=settings]').click();const downloaded=a.waitForEvent('download');await a.locator('#export-backup').click();await (await downloaded).saveAs('artifacts/production/backup.private.json');checks.push('Exportação JSON real');
-  if(await b.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw new Error('Overflow horizontal no celular');await b.screenshot({path:'artifacts/production/chat-mobile.png',fullPage:true});checks.push('Layout mobile sem overflow');
-  const visitorContext=await browser.newContext(),visitor=await visitorContext.newPage();await visitor.goto(url);await visitor.locator('#invite-code').waitFor();const denied=await visitor.evaluate(async id=>{const {db}=await import('./js/firebase.js'),{doc,getDoc}=await import('./vendor/firebase.js');try{await getDoc(doc(db,'networks/principal/records',id));return false;}catch(e){return e.code==='permission-denied';}},id);if(!denied)throw new Error('Visitante sem convite conseguiu ler o registro');await visitorContext.close();checks.push('Visitante sem convite bloqueado pelas regras reais');
-  if(errors.length)throw new Error(errors.join('\n'));success=true;
-}catch(e){console.error('Falha na verificação publicada:',e.message);await a.screenshot({path:'artifacts/production/error.png',fullPage:true}).catch(()=>{});process.exitCode=1;}
-finally{
-  // Remove only documents created by the isolated verification devices.
-  const messages=(await list(`${root}/messages`)).filter(m=>uids.includes(m.uid));
-  const activities=(await list(`${root}/activity`)).filter(m=>uids.includes(m.uid));
-  activities.forEach(m=>records.add(m.recordId));
-  const writes=[];let activePeople=0;
-  for(const id of records){const record=await getAdminDocument(`${root}/records/${id}`);if(record?.createdBy&&uids.includes(record.createdBy.uid)){if(record.type==='person'&&!record.deleted)activePeople++;for(const v of await list(`${root}/records/${id}/versions`))writes.push(deleteWrite(`${root}/records/${id}/versions/${v.id}`));writes.push(deleteWrite(`${root}/records/${id}`));}}
-  for(const m of messages)writes.push(deleteWrite(`${root}/messages/${m.id}`));
-  for(const m of activities)writes.push(deleteWrite(`${root}/activity/${m.id}`));
-  for(const uid of uids)writes.push(deleteWrite(`${root}/members/${uid}`));
-  for(const v of probe.convites){const hash=createHash('sha256').update(v.codigo).digest('hex');writes.push(deleteWrite(`${root}/invites/${hash}`));}
-  if(activePeople)writes.push({transform:{document:`projects/schrecknet-e40df/databases/(default)/documents/${root}`,fieldTransforms:[{fieldPath:'counts.person',increment:{integerValue:String(-activePeople)}}]}});
-  const network=await getAdminDocument(root);if(records.has(network?.lastRecordId))writes.push({update:{name:`projects/schrecknet-e40df/databases/(default)/documents/${root}`,fields:{lastRecordId:{stringValue:''}}},updateMask:{fieldPaths:['lastRecordId']}});
-  if(writes.length)await adminCommit(writes);await browser.close();
-  await writeFile('artifacts/production/verification.json',JSON.stringify({url,verifiedAt:new Date().toISOString(),passed:success,checks,testDataRemoved:true},null,2));
-  console.log(JSON.stringify({passed:success,checks,testDataRemoved:true}));
-}
+  for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){
+    const context=await browser.newContext({viewport}),page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error'&&/CORS policy/.test(m.text()))errors.push(m.text());});
+    const response=await page.goto(url,{waitUntil:'domcontentloaded'});if(response.status()!==200)throw new Error(`Página pública respondeu ${response.status()}`);await page.locator('#invite-code').waitFor({timeout:45000});
+    const status=await page.evaluate(async()=>{const {state}=await import('./js/state.js'),{db,auth}=await import('./js/firebase.js'),{doc,getDoc}=await import('./vendor/firebase.js');const codes=[];for(const path of ['networks/principal/profiles/user1','campaigns/principal']){try{await getDoc(doc(db,path));codes.push('unexpected-access');}catch(e){codes.push(e.code);}}return {identified:!!state.uid,appName:auth.app.name,codes};});
+    if(status.appName!=='ciclope-net-v2')throw new Error('A versão com a sessão isolada ainda não foi propagada pelo Pages.');if(!status.identified||status.codes.some(c=>c!=='permission-denied'))throw new Error('Bloqueio do visitante não foi confirmado.');if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw new Error('Overflow horizontal.');
+    await page.screenshot({path:`artifacts/production/access-${viewport.width}.png`,fullPage:true});await context.close();
+  }
+  checks.push('HTTPS 200 e carregamento dos módulos sem CORS em desktop e mobile','Sessão de autenticação isolada do site original','Visitante sem convite bloqueado no conteúdo V2 e no legado','Layout da tela pública sem overflow');
+  const local=await browser.newContext(),page=await local.newPage();page.on('pageerror',e=>errors.push(e.message));await page.goto(pathToFileURL(path.resolve('public/index.html')).href);await page.getByRole('heading',{name:'Abra pelo endereço da rede.'}).waitFor();await local.close();checks.push('Abertura file:// mostra orientação e não tenta carregar módulos');
+  if(errors.length)throw new Error(errors.join('\n'));
+  await writeFile('artifacts/production/verification.json',JSON.stringify({url,verifiedAt:new Date().toISOString(),passed:true,readOnly:true,checks},null,2));console.log(JSON.stringify({passed:true,readOnly:true,checks}));
+}finally{await browser.close();}

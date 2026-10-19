@@ -4,7 +4,9 @@
 
 ## Situação da entrega
 
-O código está implementado e testado nos emuladores Firebase e em dois contextos de navegador (desktop e celular). A publicação do repositório **paulindainfo/CICLOPENET-V2**, a ativação do GitHub Pages e a configuração do Firebase foram autorizadas pelo proprietário em 19/10/2026. O repositório original CICLOPENET será preservado. A verificação do endereço público integra a entrega da publicação.
+Publicado em **https://paulindainfo.github.io/CICLOPENET-V2/**, com código completo em **https://github.com/paulindainfo/CICLOPENET-V2**. GitHub Pages ativo, regras e índices publicados, quatro perfis inicializados e projeto mantido no Spark sem faturamento. O repositório original CICLOPENET foi preservado.
+
+Criação, edição, chat, colaboração e backups foram testados nos emuladores e em dois contextos de navegador. Na URL pública, foram verificados HTTPS, carregamento sem CORS, perfis e índices reais, layout desktop/mobile e bloqueio de visitantes sem convite. Não foram criados ou apagados registros temporários da campanha em produção.
 
 Veja o diagnóstico do original em [docs/DIAGNOSTICO.md](docs/DIAGNOSTICO.md), a arquitetura final em [docs/ARQUITETURA.md](docs/ARQUITETURA.md), o teste verificável em [docs/TESTES.md](docs/TESTES.md) e o alcance das regras em [docs/PUBLICACAO.md](docs/PUBLICACAO.md).
 
@@ -39,6 +41,8 @@ Para manter uploads gratuitos, imagens são reduzidas a até 1600 px e comprimid
 4. Nos próximos acessos, o navegador recupera a autorização e o perfil escolhido.
 
 O Firebase Anonymous Auth identifica o **dispositivo**, não a pessoa. As regras exigem uma associação válida à rede. A escolha de personagem não é autenticação forte: qualquer integrante autorizado pode selecionar qualquer perfil. Anotações e favoritos são organizados por perfil, mas são visíveis ao grupo. O convite é uma credencial de acesso: mantenha-o privado. Nenhuma senha administrativa ou chave de servidor vai para o frontend.
+
+A V2 usa a instância Firebase nomeada `ciclope-net-v2`, isolando sua sessão técnica da sessão de login do site original, mesmo quando ambos estão no mesmo domínio do GitHub Pages.
 
 Cada convite padrão expira em sete dias e autoriza dois dispositivos. O primeiro concede administração da crônica; os três restantes concedem edição dos registros. Limpar os dados do navegador ou trocar de navegador exige nova autorização.
 
@@ -76,10 +80,10 @@ Não publique somente os arquivos estáticos: as regras e os perfis precisam est
 npx firebase login
 npx firebase deploy --only firestore:rules,firestore:indexes --project schrecknet-e40df
 node scripts/provision.mjs --free
-node scripts/bootstrap.mjs
+node scripts/bootstrap.mjs --out CONVITES.private.json
 ```
 
-`bootstrap` cria a crônica e os quatro perfis somente se não existirem; não apaga registros existentes. Cada execução gera quatro novos convites. Guarde os códigos em arquivo **privado fora do repositório**; não os coloque em README, URLs ou código. Os índices podem levar alguns minutos para terminar de construir. A configuração web pública já está em `public/js/config.js`.
+`bootstrap` cria a crônica e os quatro perfis somente se não existirem; não apaga registros existentes. Cada execução gera quatro novos convites. O arquivo **CONVITES.private.json é privado**, ignorado pelo Git e excluído do ZIP público. Não coloque os códigos em README, URLs ou código. Os índices podem levar alguns minutos para terminar de construir. A configuração web pública já está em `public/js/config.js`.
 
 As regras de produção anteriores liberavam todos os documentos para qualquer conta autenticada. A nova versão exige associação para `networks/` e mantém o acesso tradicional autenticado às demais coleções, bloqueando identidades anônimas da V2 fora de sua área. **Essa mudança afeta regras de produção e exige a autorização final descrita em docs/PUBLICACAO.md.**
 

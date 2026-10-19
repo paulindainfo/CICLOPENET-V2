@@ -32,11 +32,11 @@ As regras validam o documento principal, categorias, tamanhos de textos principa
 
 ## Acesso sem cadastro
 
-Anonymous Auth cria uma identidade técnica persistente no navegador. Um convite aleatório de 256 bits é transformado em SHA-256 no navegador e usado para localizar o convite. Não há permissão de listar convites ou membros. O resgate cria a associação do próprio UID e incrementa o uso do convite na mesma transação, validada pelas regras. Conhecer apenas o ID de um perfil ou o Firebase apiKey não concede acesso.
+Anonymous Auth cria uma identidade técnica persistente no navegador. A instância Firebase nomeada ciclope-net-v2 usa uma chave de persistência de Auth separada da instância padrão do site original, evitando compartilhar a sessão entre os dois sites no mesmo domínio do Pages. Um convite aleatório de 256 bits é transformado em SHA-256 no navegador e usado para localizar o convite. Não há permissão de listar convites ou membros. O resgate cria a associação do próprio UID e incrementa o uso do convite na mesma transação, validada pelas regras. Conhecer apenas o ID de um perfil ou o Firebase apiKey não concede acesso.
 
 Revogação administrativa pode definir members/{uid}.active=false. O Firestore verifica a associação atual nas leituras e escritas. A seleção de perfil é uma preferência, não autenticação: dados associados a um perfil não são confidenciais para outros membros.
 
-O namespace legado preserva o comportamento de contas autenticadas tradicionais fora de networks/. Identidades anônimas não recebem acesso ao legado. O snapshot das regras originais está em REGRAS_ORIGINAIS.txt. Essa mudança de produção depende da autorização final.
+O namespace legado preserva o comportamento de contas autenticadas tradicionais fora de networks/. Identidades anônimas não recebem acesso ao legado. O snapshot das regras originais está em REGRAS_ORIGINAIS.txt. Essa mudança de produção foi autorizada e publicada em 19/10/2026.
 
 ## Anexos e gratuidade
 

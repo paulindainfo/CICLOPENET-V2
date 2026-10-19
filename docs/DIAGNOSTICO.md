@@ -30,7 +30,7 @@ As alterações usam transações reais, com revisão esperada, histórico imut�
 
 Sem Storage pago, imagens são comprimidas e arquivos de até 900 KB são armazenados como bytes no Firestore com acesso protegido. O limite final é de 4 anexos, 24 vínculos e 12 tags por registro, testado inclusive no formulário extenso. Backup JSON inclui os binários. A importação cria cópias com novos IDs e vínculos remapeados, sem reescrever autoria histórica. Chat, perfis e versões ficam preservados no JSON para recuperação administrativa.
 
-Hospedagem prevista: novo repositório paulindainfo/CICLOPENET-V2 e GitHub Pages gratuito; código em main e frontend em gh-pages. A publicação e a mudança das regras de produção aguardam autorização final do proprietário. O site original permanece preservado. Consulte ARQUITETURA.md e PUBLICACAO.md para o modelo completo e o alcance das regras.
+Hospedagem prevista: novo repositório paulindainfo/CICLOPENET-V2 e GitHub Pages gratuito; código em main e frontend em gh-pages. A publicação e a mudança das regras de produção foram autorizadas e concluídas em 19/10/2026. O site original permanece preservado. Consulte ARQUITETURA.md e PUBLICACAO.md para o modelo completo e o alcance das regras.
 ## Design e experiência
 
 Barra lateral carvão, linha vermelha discreta, tipografia de leitura no conteúdo e monoespaçada na sinalização. Dashboard com números reais, investigações ativas, atividade recente e atalhos. Cadastro rápido com detalhes recolhidos; erros junto ao formulário e rascunho local recuperável. No celular, menu recolhível e colunas adaptadas. Sem animação constante, glitch ou estatísticas inventadas. A ausência de configuração ou autorização apresenta instruções reais, nunca dados fingindo sincronização.

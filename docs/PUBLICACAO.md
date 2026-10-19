@@ -1,6 +1,6 @@
 # Escopo da autorização de publicação
 
-Autorização final recebida do proprietário em 19/10/2026 para executar o escopo abaixo. O repositório original será preservado.
+Autorização final recebida do proprietário em 19/10/2026. Publicação concluída: https://paulindainfo.github.io/CICLOPENET-V2/. Código: https://github.com/paulindainfo/CICLOPENET-V2. O repositório original foi preservado; o projeto Firebase segue no Spark sem faturamento.
 
 1. Criar o repositório público `paulindainfo/CICLOPENET-V2`, enviar o código completo em main e o frontend em gh-pages.
 2. Ativar GitHub Pages gratuito com a raiz de gh-pages. URL esperada: https://paulindainfo.github.io/CICLOPENET-V2/.
@@ -19,5 +19,7 @@ A nova regra protege networks/ por associação do UID à rede. Fora de networks
 Em 19/10/2026, a revisão automática de aprovação recusou a primeira tentativa de publicar as regras por considerar que substituir regras de produção poderia afetar o site atual e exigir autorização explícita sobre esse alcance. As regras não foram aplicadas por aquela tentativa. O proprietário recebeu este escopo e autorizou expressamente a publicação, as regras, os índices e os quatro perfis na mesma data.
 
 ## Recuperação
+
+A verificação de produção foi feita por leitura: HTTP 200 por HTTPS, módulos sem CORS, índices prontos, quatro perfis e quatro convites sem usos, interface de acesso desktop/mobile e negação de acesso ao visitante sem convite. A revisão automática rejeitou o teste que criaria e apagaria dados temporários em produção; essa operação foi substituída por verificações sem gravação de documentos da campanha. Os testes completos de gravação, edição, chat e backup constam em TESTES.md e foram executados nos emuladores.
 
 Antes de qualquer atualização futura, exporte um backup JSON da V2 e registre a versão das regras. Em caso de problema de interface, publique a revisão anterior do frontend; o histórico dos registros permanece no Firestore. Para falha de autorização, corrija as regras do namespace afetado, mantendo networks/ fechado para visitantes sem associação. Repor a regra original ampla voltaria a expor a V2 a todas as contas autenticadas e não é uma recuperação segura.

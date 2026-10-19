@@ -14,7 +14,9 @@ Os testes apontaram falhas nos limites de avaliação de regras para registros e
 
 ## Limites da verificação
 
-Não foram executados testes em aparelhos físicos, Safari/iOS, milhares de mensagens reais simultâneas ou recuperação administrativa completa de um projeto apagado. A validação pública da URL, dos índices de produção e do acesso no site publicado será executada somente depois da autorização final. Nenhum teste local comprova que uma implantação ainda não publicada está disponível online.
+Não foram executados testes em aparelhos físicos, Safari/iOS, milhares de mensagens reais simultâneas ou recuperação administrativa completa de um projeto apagado.
+
+Após a autorização, foi verificado o site real https://paulindainfo.github.io/CICLOPENET-V2/: HTTPS 200, módulos sem erro de CORS, quatro perfis reais, índices prontos, quatro convites privados sem usos, tela de acesso desktop/mobile sem overflow e visitante sem convite bloqueado na V2 e no legado. Também foi verificada a orientação exibida ao abrir o HTML por file://, sem tentar carregar módulos nesse modo. A verificação em produção foi somente leitura de documentos da campanha; os testes de gravação foram realizados nos emuladores. Nenhum registro fictício da campanha foi criado em produção.
 
 ## Procedimento reproduzível
 
